@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Security Header Analyzer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        body {
+            background: linear-gradient(120deg, #e0eafc, #cfdef3);
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 900px;
+            margin: 40px auto;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+            padding: 32px 28px 28px 28px;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .context {
+            background: #f0f8ff;
+            border-left: 4px solid #4fd1c5;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+            font-size: 1.08em;
+        }
+        form {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 18px;
+            justify-content: center;
+        }
+        input[type="text"] {
+            flex: 1;
+            border: 1px solid #b2bec3;
+            border-radius: 6px;
+            padding: 10px;
+            font-size: 1em;
+        }
+        button {
+            background: #4fd1c5;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 10px 18px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background: #38b2ac;
+        }
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 18px;
+            font-size: 0.98em;
+            min-width: 700px;
+        }
+        th, td {
+            border: 1px solid #e0e0e0;
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background: #f7fafc;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 32px;
+            color: #888;
+            font-size: 0.95em;
+        }
+        .risk {
+            color: #b83232;
+        }
+        .recommendation {
+            color: #22577a;
+        }
+        .header-link {
+            font-size: 0.95em;
+            color: #3182ce;
+            text-decoration: underline;
+        }
+        @media (max-width: 700px) {
+            .container {
+                max-width: 98vw;
+                padding: 10px 2vw 18px 2vw;
+            }
+            .context {
+                font-size: 1em;
+                padding: 10px;
+            }
+            form {
+                flex-direction: column;
+                gap: 8px;
+            }
+            input[type="text"], button {
+                width: 100%;
+                font-size: 1em;
+            }
+            table {
+                font-size: 0.95em;
+                min-width: 500px;
+            }
+        }
+        @media (max-width: 500px) {
+            .container {
+                padding: 4px 0 10px 0;
+            }
+            h1 {
+                font-size: 1.2em;
+            }
+            .context {
+                font-size: 0.98em;
+            }
+            table {
+                font-size: 0.9em;
+                min-width: 350px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 HTTP Security Header Analyzer</h1>
+        <div class="context">
+            <strong>What does this tool do?</strong><br>
+            Enter any website URL below to check its HTTP security headers. This tool fetches the headers from the site and analyzes whether important security headers are present, such as <b>Content-Security-Policy</b>, <b>Strict-Transport-Security</b>, <b>X-Frame-Options</b>, and more. These headers help protect users from attacks like cross-site scripting, clickjacking, and data leaks.<br><br>
+            <b>How to use:</b> Enter a full domain (e.g., <code>example.com</code> or <code>https://example.com</code>) and click Analyze. You'll see which security headers are present, missing, and their values, along with recommendations and risks.
+        </div>
+        <form method="POST">
+            <input type="text" name="url" placeholder="Enter a URL (e.g. example.com)" required value="{{ url|default('') }}">
+            <button type="submit">Analyze</button>
+        </form>
+
+        {% if error %}
+            <p style="color: red; text-align:center;">Error: {{ error }}</p>
+        {% endif %}
+
+        {% if results %}
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Header</th>
+                        <th>Status</th>
+                        <th>Value</th>
+                        <th>Description</th>
+                        <th>Recommendation</th>
+                        <th>Risk</th>
+                        <th>More Info</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for header, info in results.items() %}
+                        <tr style="background-color: {{ 'lightgreen' if info.ok else '#ffdddd' }}">
+                            <td>{{ header }}</td>
+                            <td>{{ "✅ Present" if info.present else "❌ Missing" }}</td>
+                            <td style="word-break: break-all;">{{ info.value }}</td>
+                            <td>{{ info.description }}</td>
+                            <td class="recommendation">{{ info.recommendation }}</td>
+                            <td class="risk">{{ info.risk }}</td>
+                            <td>
+                                <a class="header-link" href="{{ {
+                                    'Content-Security-Policy': 'https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy',
+                                    'Strict-Transport-Security': 'https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security',
+                                    'X-Content-Type-Options': 'https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Content-Type-Options',
+                                    'X-Frame-Options': 'https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Frame-Options',
+                                    'Referrer-Policy': 'https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Referrer-Policy',
+                                    'Permissions-Policy': 'https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Permissions-Policy',
+                                    'Cross-Origin-Embedder-Policy': 'https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cross-Origin-Embedder-Policy',
+                                    'Cross-Origin-Opener-Policy': 'https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cross-Origin-Opener-Policy',
+                                    'Cross-Origin-Resource-Policy': 'https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cross-Origin-Resource-Policy',
+                                    'Cache-Control': 'https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control',
+                                    'Set-Cookie': 'https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie',
+                                    'X-XSS-Protection': 'https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-XSS-Protection',
+                                    'X-Permitted-Cross-Domain-Policies': 'https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Permitted-Cross-Domain-Policies'
+                                }[header] }}" target="_blank">Learn More</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    </div>
+    <div class="footer">
+        &copy; {{ 2024 }} Security Header Analyzer &mdash; Built with Flask
+    </div>
+</body>
+</html>
